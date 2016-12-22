@@ -1,0 +1,16 @@
+{
+    "name": "tadologger",
+    "author": "Francesco Vozza <fvozza at gmail dot com>",
+    "description": "Tado Thermostat Logger",
+    "version": "0.0.1",
+    "scripts": {
+    "start": "node tado.js"
+    },
+    "dependencies": {
+        "restify": "*",
+        "request": "*",
+        "moment": "*",
+        "node-netrc": "*",
+        "influx": "*"
+    }
+}
