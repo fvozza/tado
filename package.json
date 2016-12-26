@@ -7,7 +7,6 @@
     "start": "node tado.js"
     },
     "dependencies": {
-        "restify": "*",
         "request": "*",
         "moment": "*",
         "node-netrc": "*",
