@@ -1,16 +1,9 @@
 /*jshint esnext: true */
 /* jshint node: true */
 
-/* 
-
-TODO: 
-
-1. handle failed authorization
-
-*/
+'use strict';
 
 var tado = require('./client.js').Client;
-//var events = require('events');
 
 // Authentication via .netrc
 var netrc = require('node-netrc');
@@ -26,6 +19,7 @@ const influx = new Influx.InfluxDB({
     host: DB_HOST,
 });
 
+const logInterval = 10*60*1000; /* logging interval in ms */
 var homeId;
 var home;
 var zones;
@@ -64,7 +58,7 @@ function initDB() {
     return new Promise((resolve, reject) => {
         influx.createDatabase(DB_NAME)
             .then(dbCreatePolicy)
-            .then(console.log('Connected to database:', DB_HOST+ '/' + DB_NAME))
+            .then(console.log('Connected to database:', 'http://' + DB_HOST + '/' + DB_NAME))
             .then(resolve(true));
     });
 }
@@ -102,7 +96,7 @@ function tadoLogger() {
             .then((result) => {
                 influx.writeMeasurement('thermostat', [
                     {
-                        tags: {zone: 'Living Room'},
+                        tags: {zone: zone.name},
                         fields: {
                             temperature: result.sensorDataPoints.insideTemperature.celsius,
                             humidity: result.sensorDataPoints.humidity.percentage,
@@ -115,7 +109,7 @@ function tadoLogger() {
                         precision: 's'
                     }
                 ).then(result => {
-                    console.log('Data written to db');    
+//                    console.log('Data written to db');    
                 })
                 .catch(err => {
                         console.log('Error writing to db', err);
@@ -125,12 +119,13 @@ function tadoLogger() {
                console.error(`Error reading from the thermostat! - `, err);
             });
             
-        setTimeout(tadoLogger, 5000);
+        setTimeout(tadoLogger, logInterval);
     }
 }
 
 Promise.all([initDB(), tadoSetup()])
     .catch(results => {console.log('Initialization falied..', results)})
     .then(results => {
+        console.log('Logging started...');
         tadoLogger();
     });
