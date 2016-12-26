@@ -1,15 +1,24 @@
 /*jshint esnext: true */
 /* jshint node: true */
 
+/* 
+
+TODO: 
+
+1. handle failed authorization
+
+*/
+
 var tado = require('./client.js').Client;
-var events = require('events');
+//var events = require('events');
 
 // Authentication via .netrc
 var netrc = require('node-netrc');
 const auth = netrc('my.tado.com');
 
 // InfluxDB
-const DB_HOST = 'elcap.ddns.net';
+//const DB_HOST = 'elcap.ddns.net';
+const DB_HOST = 'localhost';
 const DB_NAME = 'tadodb';
 
 var Influx = require('influx');
@@ -20,89 +29,108 @@ const influx = new Influx.InfluxDB({
 var homeId;
 var home;
 var zones;
-var authenticated = false;
-
-/* Events handlers */
-var eventEmitter = new events.EventEmitter();
-eventEmitter.on('authenticated', setup);
-eventEmitter.on('ready', theLoop);
 
 /* Misc functions */
-function setup() {
+
+function authorize(login, pass) {
     return new Promise((resolve, reject) => {
-
-        tado.me()
+        tado.login(login, pass)
             .then((result) => {
-                homeId = result.homes[0].id;
-
-                tado.home(homeId).then((result) => {
-                    home = result;
-
-                    tado.zones(homeId).then((result) => {
-                        zones = result;
-
-                        eventEmitter.emit('ready');
-                        resolve(true);
-                    });
-                });
-            })
-            .catch(reject => {
-                console.log(reject);
+                if (result) {
+                    resolve(true);
+                } else {
+                    reject(false);
+                }
             });
     });
 }
 
-function initDB() {
-    influx.getDatabaseNames()
-        .then(names => {
-            if (!names.includes(DB_NAME)) {
-                console.log('Database %s created', DB_NAME);
-                return influx.createDatabase(DB_NAME);
-            } else {
-                console.log('Connected to database:', DB_HOST+ '/' + DB_NAME);
-            }
-            eventEmitter.emit('dbok');
-        })
-        .catch(err => {
-            console.error(`Error creating Influx database! - `, err);
-        });
-}
+function dbCreatePolicy() {
+    return new Promise((resolve,reject) => {
 
-function authorize(login, pass) {
-    tado.login(login, pass).then((success) => {
-        if (success) {
-            authenticated = true;
-            eventEmitter.emit('authenticated');
-        }
+        influx.createRetentionPolicy('52w',
+            {
+                database: DB_NAME,
+                duration: '52w',
+                isDefault: true,
+                replication: 1
+            })
+            .then(resolve(true))
+            .catch(reject(false));
+    });
+};
+
+function initDB() {
+    return new Promise((resolve, reject) => {
+        influx.createDatabase(DB_NAME)
+            .then(dbCreatePolicy)
+            .then(console.log('Connected to database:', DB_HOST+ '/' + DB_NAME))
+            .then(resolve(true));
     });
 }
 
 
-function theLoop() {
+function tadoSetup() {
+    return new Promise((resolve, reject) => {
+
+        authorize(auth.login, auth.password)
+            .then(result => {
+                tado.me()
+                    .then(result => { 
+                        homeId = result.homes[0].id;
+                        
+                        Promise.all([tado.home(homeId), tado.zones(homeId)])
+                            .then(results => {
+                                home = results[0];
+                                zones = results[1];
+                                resolve(true);
+                            });
+                    })
+                    .catch(err => {console.log(err)})
+            })
+            .catch(reject => {
+                console.log('TADO authorization failed! ', reject);
+                reject(false);
+            });
+    });
+}
+
+function tadoLogger() {
 
     for (var zone of zones) {
-        tado.state(homeId, zone.id).then((result) => {
+        tado.state(homeId, zone.id)
+            .then((result) => {
+                influx.writeMeasurement('thermostat', [
+                    {
+                        tags: {zone: 'Living Room'},
+                        fields: {
+                            temperature: result.sensorDataPoints.insideTemperature.celsius,
+                            humidity: result.sensorDataPoints.humidity.percentage,
+                        },
+                    }
+                ],
+                    {
+                        database: DB_NAME,
+                        retentionPolicy: '52w',
+                        precision: 's'
+                    }
+                ).then(result => {
+                    console.log('Data written to db');    
+                })
+                .catch(err => {
+                        console.log('Error writing to db', err);
+                });
+            })
+            .catch(err => {
+               console.error(`Error reading from the thermostat! - `, err);
+            });
             
-            influx.writeMeasurement('thermostat', [
-                {
-                    tags: {zone: 'Living Room'},
-                    fields: {
-                        temperature: result.sensorDataPoints.insideTemperature.celsius,
-                        humidity: result.sensorDataPoints.humidity.percentage,
-                    },
-                }
-            ],
-                {
-                    database: DB_NAME,
-                    retentionPolicy: '52w',
-                    precision: 's'
-                }
-            );
-            
-            setTimeout(theLoop, 5000);
-        });
+        setTimeout(tadoLogger, 5000);
     }
 }
 
-initDB();
-authorize(auth.login, auth.password);
+Promise.all([initDB(), tadoSetup()])
+    .catch(results => {console.log('Initialization falied..', results)})
+    .then(results => {
+        tadoLogger();
+    });
