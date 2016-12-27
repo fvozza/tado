@@ -57,9 +57,13 @@ function dbCreatePolicy() {
 function initDB() {
     return new Promise((resolve, reject) => {
         influx.createDatabase(DB_NAME)
-            .then(dbCreatePolicy)
-            .then(console.log('Connected to database:', 'http://' + DB_HOST + '/' + DB_NAME))
-            .then(resolve(true));
+            .then(result => {
+                dbCreatePolicy();
+                console.log('Connected to database:', 'http://' + DB_HOST + '/' + DB_NAME);
+                resolve(true);
+            }, result => {
+                reject(result);
+            })
     });
 }
 
@@ -124,8 +128,9 @@ function tadoLogger() {
 }
 
 Promise.all([initDB(), tadoSetup()])
-    .catch(results => {console.log('Initialization falied..', results)})
     .then(results => {
         console.log('Logging started...');
         tadoLogger();
+    }, results => {
+        console.log('Initialization failed with error: ', results.code);
     });
