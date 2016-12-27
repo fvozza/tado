@@ -1,11 +1,16 @@
 # TADO Logger
 
-## Use .netrc for credentials
-
-Must have a ~/.netrc file with your thermostat credentials. Example:
+## Use ENV variables for credentials
 
 ```
-machine my.tado.com
-	login <your email>
-	password <your password>
+export TADO_LOGIN="your email"
+export TADO_PASSWORD="your password"
+
+```
+
+## Docker image
+
+```
+docker pull fvozza/tado
+docker run -e TADO_LOGIN="your email" -e TADO_PASSWORD="your password" fvozza/tado
 ```

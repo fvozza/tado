@@ -5,9 +5,11 @@
 
 var tado = require('./client.js').Client;
 
-// Authentication via .netrc
-var netrc = require('node-netrc');
-const auth = netrc('my.tado.com');
+// Authentication via ENV variables
+const auth = {
+    login: process.env.tado_login,
+    password: process.env.tado_password
+};
 
 // InfluxDB
 //const DB_HOST = 'elcap.ddns.net';
@@ -29,12 +31,13 @@ var zones;
 function authorize(login, pass) {
     return new Promise((resolve, reject) => {
         tado.login(login, pass)
-            .then((result) => {
-                if (result) {
-                    resolve(true);
-                } else {
-                    reject(false);
-                }
+            .then(result => {
+                console.log('TADO authorization successful');
+                resolve(true);
+            })
+            .catch(result => {
+                console.log('TADO authorization failed! ', result);
+                reject(false);
             });
     });
 }
@@ -85,9 +88,7 @@ function tadoSetup() {
                             });
                     })
                     .catch(err => {console.log(err)})
-            })
-            .catch(reject => {
-                console.log('TADO authorization failed! ', reject);
+            }, result => {
                 reject(false);
             });
     });
@@ -132,5 +133,5 @@ Promise.all([initDB(), tadoSetup()])
         console.log('Logging started...');
         tadoLogger();
     }, results => {
-        console.log('Initialization failed with error: ', results.code);
+        console.log('Initialization failed [%s]. Cannot start logging.', results.code);
     });
