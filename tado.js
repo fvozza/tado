@@ -7,8 +7,8 @@ var tado = require('./client.js').Client;
 
 // Authentication via ENV variables
 const auth = {
-    login: process.env.tado_login,
-    password: process.env.tado_password
+    login: process.env.TADO_LOGIN,
+    password: process.env.TADO_PASSWORD
 };
 
 // InfluxDB
