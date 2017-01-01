@@ -117,11 +117,11 @@ function tadoLogger() {
 //                    console.log('Data written to db');    
                 })
                 .catch(err => {
-                        console.log('Error writing to db', err);
+                        console.log('Error writing to db: \n', err);
                 });
             })
             .catch(err => {
-               console.error(`Error reading from the thermostat! - `, err);
+               console.error('Error reading from the thermostat: \n', err);
             });
             
         setTimeout(tadoLogger, logInterval);
