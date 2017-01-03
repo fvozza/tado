@@ -12,8 +12,8 @@ const auth = {
 };
 
 // InfluxDB
-//const DB_HOST = 'elcap.ddns.net';
-const DB_HOST = 'localhost';
+const DB_HOST = 'elcap.ddns.net';
+//const DB_HOST = 'localhost';
 const DB_NAME = 'tadodb';
 
 var Influx = require('influx');

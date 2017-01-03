@@ -63,7 +63,7 @@ module.exports.Client = new class Client {
     saveToken(token) {
         this.token = token;
         this.token.expires_in = moment().add(token.expires_in, 'seconds').toDate();
-        console.log(this.token, this.token.expires_in);
+//        console.log(this.token, this.token.expires_in);
     }
 
     refreshToken() {
