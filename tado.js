@@ -4,6 +4,9 @@
 'use strict';
 
 var tado = require('./client.js').Client;
+var moment = require('moment');
+var winston = require('winston');
+winston.level = 'debug';
 
 // Authentication via ENV variables
 const auth = {
@@ -114,14 +117,14 @@ function tadoLogger() {
                         precision: 's'
                     }
                 ).then(result => {
-//                    console.log('Data written to db');    
+                    console.log('[%s] Data written to db', moment().toString());
                 })
                 .catch(err => {
-                        console.log('Error writing to db: \n', err);
+                        console.log('[%s] Error writing to db: ', moment().toString(), err);
                 });
             })
             .catch(err => {
-               console.error('Error reading from the thermostat: \n', err);
+                console.error('[%s] Error reading from the thermostat: ', moment().toString(), err.errors[0].code);
             });
             
         setTimeout(tadoLogger, logInterval);

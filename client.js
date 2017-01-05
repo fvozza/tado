@@ -61,9 +61,10 @@ module.exports.Client = new class Client {
     }
 
     saveToken(token) {
+//        console.log(token);
         this.token = token;
         this.token.expires_in = moment().add(token.expires_in, 'seconds').toDate();
-//        console.log(this.token, this.token.expires_in);
+        console.log('[%s] NEW TOKEN [Expires in: %s]', moment().toString(), this.token.expires_in.toString());
     }
 
     refreshToken() {
@@ -86,6 +87,7 @@ module.exports.Client = new class Client {
                 json: true
             }, (err, response, result) => {
                 if (err || response.statusCode !== 200) {
+                    console.log('Error refreshing token: ', err, response.statusCode);
                     reject(err || result);
                 } else {
                     this.saveToken(result);
